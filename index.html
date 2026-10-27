@@ -11,7 +11,7 @@ html,body{height:100%;margin:0;background:#000;color:#fff;font-family:-apple-sys
 .page{flex:0 0 100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow-y:auto;box-sizing:border-box;padding:12px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .lbl{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#777;margin-top:14px}
 .cct{font-size:64px;font-weight:200;line-height:1.05}.cct small{font-size:24px;color:#999;margin-left:4px}
-.val{font-size:36px;font-weight:300}.val small{font-size:16px;color:#999;margin-left:4px}
+.gm{font-size:14px;color:#888;margin-top:2px;letter-spacing:.05em}.val{font-size:36px;font-weight:300}.val small{font-size:16px;color:#999;margin-left:4px}
 #hist{width:100%;height:140px;display:block}
 #go{margin-top:34px;width:100px;height:100px;border-radius:50%;border:2px solid #fff;background:#000;color:#fff;font-size:16px;letter-spacing:.1em;flex:none}
 #go:active{background:#222}#go:disabled{opacity:.4}
@@ -49,6 +49,7 @@ video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
     <canvas id="hist"></canvas>
     <div class="lbl" style="margin-top:8px">Temperatura de color</div>
     <div class="cct"><span id="cct">—</span><small>K</small></div>
+    <div class="gm" id="gm">G/M —</div>
     <div class="lbl">Iluminancia</div>
     <div class="val"><span id="lux">—</span><small>lx</small></div>
     <div class="lbl">CRI aprox.</div>
@@ -100,7 +101,9 @@ function kRGB(k){const t=k/100;let r,g,b;
   g=t<=66?99.4708025861*Math.log(t)-161.1195681661:288.1221695283*Math.pow(t-60,-.0755148492);
   b=t>=66?255:(t<=19?0:138.5177312231*Math.log(t-10)-305.0447927307);
   const c=v=>Math.max(0,Math.min(255,Math.round(v)));return [c(r),c(g),c(b)]}
-const cols=[...Array(NB)].map((_,i)=>kRGB(K0+(K1-K0)*i/(NB-1)));
+const STOPS=[[2800,[255,40,30]],[3200,[255,176,46]],[4200,[255,228,160]],[5600,[238,244,255]],[6500,[50,110,255]]];
+function stopRGB(k){for(let j=1;j<STOPS.length;j++){if(k<=STOPS[j][0]||j===STOPS.length-1){const a=STOPS[j-1],b=STOPS[j],f=Math.max(0,Math.min(1,(k-a[0])/(b[0]-a[0])));return a[1].map((v,n)=>Math.round(v+(b[1][n]-v)*f))}}}
+const cols=[...Array(NB)].map((_,i)=>stopRGB(K0+(K1-K0)*i/(NB-1)));
 const hc=$('hist'),hx=hc.getContext('2d');let dpr=1;
 function sizeHist(){dpr=window.devicePixelRatio||1;hc.width=Math.max(1,hc.clientWidth*dpr);hc.height=Math.max(1,hc.clientHeight*dpr)}
 sizeHist();
@@ -114,7 +117,7 @@ function draw(ts){
     else if(pos!=null){const d=i-pos,g=Math.exp(-d*d/(2*2.2*2.2));tg+=g*(.88+.04*Math.sin(t*5+i));al=.4+.6*Math.exp(-d*d/(2*1.6*1.6))}
     bars[i]+=(Math.min(tg,1)-bars[i])*.12;
     const h=Math.max(3*dpr,bars[i]*mh),x=i*bw+bw*.14,w=bw*.72,y=mh-h;
-    const c=cols[i];hx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${al})`;
+    const pk=pos!=null&&!measuring&&i===Math.round(pos);const c=pk?[255,255,255]:cols[i];hx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${pk?1:al})`;
     hx.beginPath();hx.roundRect?hx.roundRect(x,y,w,h,w/2.2):hx.rect(x,y,w,h);hx.fill();
   }
   hx.fillStyle='#555';hx.font=`${10*dpr}px -apple-system,Arial`;hx.textBaseline='bottom';
@@ -166,7 +169,7 @@ function analyze(rgb){
   const up=(.860117757+1.54118254e-4*T+1.28641212e-7*T*T)/(1+8.42420235e-4*T+7.08145163e-7*T*T);
   const vp=(.317398726+4.22806245e-5*T+4.20481691e-8*T*T)/(1-2.89741816e-5*T+1.61456053e-7*T*T);
   const duv=Math.sign(v-vp)*Math.hypot(u-up,v-vp);
-  return {T,Y,cri:Math.round(Math.max(40,Math.min(99,99-1500*Math.abs(duv))))};
+  return {T,Y,duv,cri:Math.round(Math.max(40,Math.min(99,99-1500*Math.abs(duv))))};
 }
 $('go').onclick=async()=>{
   const b=$('go');b.disabled=true;measuring=true;readT=null;$('st').textContent='Midiendo…';
@@ -178,6 +181,7 @@ $('go').onclick=async()=>{
     const t=st.exposureTime?st.exposureTime*1e-4:null,iso=st.iso||null;
     measuring=false;readT=a.T;
     $('cct').textContent=Math.round(a.T/10)*10;$('cri').textContent='≈ '+a.cri;
+    const gv=a.duv*1000,gm=$('gm');gm.textContent='G/M '+(gv>=0?'+':'−')+Math.abs(gv).toFixed(1);gm.style.color=Math.abs(gv)<.5?'#888':(gv>0?'#6fcf6f':'#e060d0');
     if(t&&iso){
       lastRaw=250*1.8*1.8/(t*iso)*(a.Y/.18);const lx=lastRaw*factor;
       $('lux').textContent=lx>=100?Math.round(lx).toLocaleString('es'):lx.toFixed(1);
