@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Medidor de luz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;background:#000;color:#fff;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;overscroll-behavior:none}
+#app{height:100%;display:flex;flex-direction:column}
+#pager{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none}
+#pager::-webkit-scrollbar{display:none}
+.page{flex:0 0 100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow-y:auto;box-sizing:border-box;padding:12px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.lbl{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#777;margin-top:14px}
+.cct{font-size:64px;font-weight:200;line-height:1.05}.cct small{font-size:24px;color:#999;margin-left:4px}
+.val{font-size:36px;font-weight:300}.val small{font-size:16px;color:#999;margin-left:4px}
+#hist{width:100%;height:140px;display:block}
+#go{margin-top:34px;width:100px;height:100px;border-radius:50%;border:2px solid #fff;background:#000;color:#fff;font-size:16px;letter-spacing:.1em;flex:none}
+#go:active{background:#222}#go:disabled{opacity:.4}
+#st{min-height:32px;font-size:12px;color:#888;max-width:300px;margin-top:12px}
+h1{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:#777;font-weight:400;margin:18px 0 20px}
+.wheels{display:flex;gap:28px;justify-content:center}
+.wl{font-size:11px;letter-spacing:.18em;color:#777;margin-bottom:8px}
+.ww{position:relative;height:176px;width:108px}
+.ww::after{content:"";position:absolute;left:0;right:0;top:66px;height:44px;border-top:1px solid #555;border-bottom:1px solid #555;pointer-events:none}
+.wheel{height:176px;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;touch-action:pan-y;-webkit-mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent);mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent)}
+.wheel::-webkit-scrollbar{display:none}
+.pad{height:66px}
+.it{height:44px;line-height:44px;scroll-snap-align:center;font-size:26px;font-weight:300;color:#fff;transition:color .1s}
+.lk{background:none;border:1px solid #333;color:#aaa;font-size:13px;border-radius:18px;padding:9px 16px;margin:6px}
+#ap{font-size:12px;color:#777;margin-top:22px;max-width:300px;line-height:1.5}
+nav{flex:none;height:60px;display:flex;border-top:1px solid #1a1a1a;background:#000}
+nav button{flex:1;background:none;border:0;color:#555;display:flex;align-items:center;justify-content:center;position:relative}
+nav button.on{color:#fff}
+nav button.on::after{content:"";position:absolute;bottom:8px;width:4px;height:4px;border-radius:50%;background:#fff}
+nav svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+</style></head><body>
+<div id="app">
+<div id="pager">
+  <section class="page" id="pSet">
+    <h1>Configuración</h1>
+    <div class="wheels">
+      <div><div class="wl">ISO</div><div class="ww"><div class="wheel" id="wIso"></div></div></div>
+      <div><div class="wl">FPS</div><div class="ww"><div class="wheel" id="wFps"></div></div></div>
+    </div>
+    <div style="margin-top:26px"><button class="lk" id="cam">Cámara: trasera</button><button class="lk" id="cal">Calibrar lux</button></div>
+    <div id="ap">La cámara aplica estos valores al medir, si el dispositivo lo permite.</div>
+  </section>
+  <section class="page" id="pMain">
+    <canvas id="hist"></canvas>
+    <div class="lbl" style="margin-top:8px">Temperatura de color</div>
+    <div class="cct"><span id="cct">—</span><small>K</small></div>
+    <div class="lbl">Iluminancia</div>
+    <div class="val"><span id="lux">—</span><small>lx</small></div>
+    <div class="lbl">CRI aprox.</div>
+    <div class="val"><span id="cri">—</span></div>
+    <button id="go">MEDIR</button>
+    <div id="st">Coloca la esfera blanca sobre la cámara y pulsa MEDIR.</div>
+  </section>
+</div>
+<nav>
+  <button id="nSet" aria-label="Configuración"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  <button id="nMain" aria-label="Medición" class="on"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg></button>
+</nav>
+</div>
+<video id="v" playsinline muted></video>
+<script>
+const $=id=>document.getElementById(id);
+const ISOS=[50,100,200,400,800,1600,3200];
+const FPSL=[['23,97',23.976],['24',24],['30',30],['59,94',59.94],['60',60]];
+let cfg={iso:100,fps:30},stream=null,track=null,facing='environment',lastRaw=null,factor=1,measuring=false,readT=null;
+try{factor=parseFloat(localStorage.getItem('luxf'))||1;const c=JSON.parse(localStorage.getItem('luxcfg')||'null');if(c&&c.iso&&c.fps)cfg=c}catch(e){}
+const save=()=>{try{localStorage.setItem('luxcfg',JSON.stringify(cfg))}catch(e){}};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------- Páginas y navegación ---------- */
+const pager=$('pager');
+function goTo(i,smooth){pager.scrollTo({left:i*pager.clientWidth,behavior:smooth?'smooth':'auto'})}
+function mark(){const i=Math.round(pager.scrollLeft/pager.clientWidth);$('nSet').classList.toggle('on',i===0);$('nMain').classList.toggle('on',i===1)}
+pager.addEventListener('scroll',mark,{passive:true});
+$('nSet').onclick=()=>goTo(0,true);$('nMain').onclick=()=>goTo(1,true);
+addEventListener('resize',()=>{mark();sizeHist()});
+
+/* ---------- Ruedas (ruleta) ---------- */
+function wheel(el,labels,idx,onChange){
+  el.innerHTML='<div class="pad"></div>'+labels.map(l=>`<div class="it">${l}</div>`).join('')+'<div class="pad"></div>';
+  const items=[...el.querySelectorAll('.it')];let tm=null,last=-1;
+  const paint=()=>{const p=el.scrollTop/44;items.forEach((it,i)=>{const d=Math.abs(i-p);it.style.transform=`scale(${1-.14*Math.min(d,2)})`;it.style.opacity=Math.max(.25,1-.38*d)});
+    const k=Math.max(0,Math.min(labels.length-1,Math.round(p)));if(k!==last){last=k;if(navigator.vibrate)try{navigator.vibrate(4)}catch(e){}}};
+  el.addEventListener('scroll',()=>{paint();clearTimeout(tm);tm=setTimeout(()=>onChange(last),140)},{passive:true});
+  items.forEach((it,i)=>it.onclick=()=>el.scrollTo({top:i*44,behavior:'smooth'}));
+  const init=()=>{el.scrollTop=idx*44;paint()};requestAnimationFrame(()=>requestAnimationFrame(init));
+}
+wheel($('wIso'),ISOS,Math.max(0,ISOS.indexOf(cfg.iso)),i=>{cfg.iso=ISOS[i];save()});
+wheel($('wFps'),FPSL.map(f=>f[0]),Math.max(0,FPSL.findIndex(f=>Math.abs(f[1]-cfg.fps)<.01)),i=>{cfg.fps=FPSL[i][1];save()});
+
+/* ---------- Histograma animado ---------- */
+const NB=38,K0=2800,K1=6500,bars=new Float32Array(NB);
+function kRGB(k){const t=k/100;let r,g,b;
+  r=t<=66?255:329.698727446*Math.pow(t-60,-.1332047592);
+  g=t<=66?99.4708025861*Math.log(t)-161.1195681661:288.1221695283*Math.pow(t-60,-.0755148492);
+  b=t>=66?255:(t<=19?0:138.5177312231*Math.log(t-10)-305.0447927307);
+  const c=v=>Math.max(0,Math.min(255,Math.round(v)));return [c(r),c(g),c(b)]}
+const cols=[...Array(NB)].map((_,i)=>kRGB(K0+(K1-K0)*i/(NB-1)));
+const hc=$('hist'),hx=hc.getContext('2d');let dpr=1;
+function sizeHist(){dpr=window.devicePixelRatio||1;hc.width=Math.max(1,hc.clientWidth*dpr);hc.height=Math.max(1,hc.clientHeight*dpr)}
+sizeHist();
+function draw(ts){
+  const t=ts/1000,W=hc.width,H=hc.height,lab=16*dpr,mh=H-lab-4*dpr,bw=W/NB;
+  hx.clearRect(0,0,W,H);
+  const pos=readT==null?null:Math.max(0,Math.min(NB-1,(readT-K0)/(K1-K0)*(NB-1)));
+  for(let i=0;i<NB;i++){
+    let tg=.07+.04*Math.sin(t*1.6+i*.5),al=.55;
+    if(measuring)tg=.1+.3*(.5+.5*Math.sin(t*6-i*.5));
+    else if(pos!=null){const d=i-pos,g=Math.exp(-d*d/(2*2.2*2.2));tg+=g*(.88+.04*Math.sin(t*5+i));al=.4+.6*Math.exp(-d*d/(2*1.6*1.6))}
+    bars[i]+=(Math.min(tg,1)-bars[i])*.12;
+    const h=Math.max(3*dpr,bars[i]*mh),x=i*bw+bw*.14,w=bw*.72,y=mh-h;
+    const c=cols[i];hx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${al})`;
+    hx.beginPath();hx.roundRect?hx.roundRect(x,y,w,h,w/2.2):hx.rect(x,y,w,h);hx.fill();
+  }
+  hx.fillStyle='#555';hx.font=`${10*dpr}px -apple-system,Arial`;hx.textBaseline='bottom';
+  hx.textAlign='left';hx.fillText('2800 K',2,H);hx.textAlign='center';hx.fillText('4650 K',W/2,H);hx.textAlign='right';hx.fillText('6500 K',W-2,H);
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+/* ---------- Cámara y medición ---------- */
+const lin=c=>{c/=255;return c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4)};
+const cv=document.createElement('canvas');cv.width=cv.height=48;
+const cx=cv.getContext('2d',{willReadFrequently:true});
+function sample(){
+  const v=$('v'),w=v.videoWidth,h=v.videoHeight,s=Math.min(w,h)*.4;
+  cx.drawImage(v,(w-s)/2,(h-s)/2,s,s,0,0,48,48);
+  const d=cx.getImageData(0,0,48,48).data;let r=0,g=0,b=0;const n=d.length/4;
+  for(let i=0;i<d.length;i+=4){r+=lin(d[i]);g+=lin(d[i+1]);b+=lin(d[i+2])}
+  return [r/n,g/n,b/n];
+}
+const yOf=s=>.2126*s[0]+.7152*s[1]+.0722*s[2];
+const ap=async o=>{try{await track.applyConstraints({advanced:[o]})}catch(e){}};
+async function start(){
+  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:640},frameRate:{ideal:cfg.fps}},audio:false});
+  track=stream.getVideoTracks()[0];$('v').srcObject=stream;await $('v').play();
+  const c=track.getCapabilities?track.getCapabilities():{};
+  try{await track.applyConstraints({width:{ideal:640},frameRate:{ideal:cfg.fps}})}catch(e){}
+  if(c.whiteBalanceMode&&c.whiteBalanceMode.includes('manual')){await ap({whiteBalanceMode:'manual'});if(c.colorTemperature)await ap({colorTemperature:5000})}
+  if(c.exposureMode&&c.exposureMode.includes('manual'))await ap({exposureMode:'manual'});
+  if(c.iso)await ap({iso:Math.min(Math.max(cfg.iso,c.iso.min),c.iso.max)});
+  return c;
+}
+async function fitExposure(c){
+  if(!c.exposureTime)return;
+  const min=c.exposureTime.min,max=Math.max(min,Math.min(c.exposureTime.max,1e4/cfg.fps)); // la exposición no excede 1/fps
+  let t=Math.min(Math.max(min*4,min),max);
+  for(let i=0;i<8;i++){
+    await ap({exposureMode:'manual',exposureTime:t});await sleep(350);
+    const y=yOf(sample());if(y>.12&&y<.6)return;
+    const nt=Math.min(Math.max(t*(.3/Math.max(y,.002)),min),max);if(nt===t)return;t=nt;
+  }
+}
+function analyze(rgb){
+  const [R,G,B]=rgb;
+  const X=.4124*R+.3576*G+.1805*B,Y=.2126*R+.7152*G+.0722*B,Z=.0193*R+.1192*G+.9505*B,S=X+Y+Z;
+  const x=X/S,y=Y/S,n=(x-.332)/(y-.1858);
+  const T=Math.max(1000,Math.min(25000,-449*n**3+3525*n**2-6823.3*n+5520.33));
+  const D=X+15*Y+3*Z,u=4*X/D,v=6*Y/D;
+  const up=(.860117757+1.54118254e-4*T+1.28641212e-7*T*T)/(1+8.42420235e-4*T+7.08145163e-7*T*T);
+  const vp=(.317398726+4.22806245e-5*T+4.20481691e-8*T*T)/(1-2.89741816e-5*T+1.61456053e-7*T*T);
+  const duv=Math.sign(v-vp)*Math.hypot(u-up,v-vp);
+  return {T,Y,cri:Math.round(Math.max(40,Math.min(99,99-1500*Math.abs(duv))))};
+}
+$('go').onclick=async()=>{
+  const b=$('go');b.disabled=true;measuring=true;readT=null;$('st').textContent='Midiendo…';
+  try{
+    const c=await start();await sleep(500);await fitExposure(c);await sleep(300);
+    const N=Math.min(48,Math.max(12,Math.round(cfg.fps))),dt=1000/cfg.fps;let acc=[0,0,0];
+    for(let i=0;i<N;i++){const s=sample();acc=acc.map((a,k)=>a+s[k]/N);await sleep(dt)}
+    const a=analyze(acc),st=track.getSettings();
+    const t=st.exposureTime?st.exposureTime*1e-4:null,iso=st.iso||null;
+    measuring=false;readT=a.T;
+    $('cct').textContent=Math.round(a.T/10)*10;$('cri').textContent='≈ '+a.cri;
+    if(t&&iso){
+      lastRaw=250*1.8*1.8/(t*iso)*(a.Y/.18);const lx=lastRaw*factor;
+      $('lux').textContent=lx>=100?Math.round(lx).toLocaleString('es'):lx.toFixed(1);
+      $('st').textContent='Medición lista. Valores aproximados.';
+    }else{
+      lastRaw=null;$('lux').textContent='—';
+      $('st').textContent='Este navegador no expone la exposición de la cámara; los lux requieren Chrome en Android.';
+    }
+    $('ap').textContent=`Aplicado: ISO ${st.iso||'—'} · ${st.frameRate?Math.round(st.frameRate*100)/100:'—'} fps · exposición ${t?'1/'+Math.round(1/t)+' s':'—'}`;
+  }catch(e){measuring=false;$('st').textContent='No se pudo usar la cámara: permite el acceso e inténtalo de nuevo.'}
+  b.disabled=false;
+};
+$('cam').onclick=()=>{facing=facing==='environment'?'user':'environment';$('cam').textContent='Cámara: '+(facing==='environment'?'trasera':'frontal')};
+$('cal').onclick=()=>{
+  if(!lastRaw){$('ap').textContent='Primero haz una medición para calibrar.';return}
+  const r=parseFloat((prompt('Lux de referencia (de un luxómetro) para la última medición:')||'').replace(',','.'));
+  if(r>0){factor=r/lastRaw;try{localStorage.setItem('luxf',factor)}catch(e){}$('lux').textContent=Math.round(r);$('ap').textContent='Calibración guardada.'}
+};
+addEventListener('load',()=>{goTo(1,false);mark();sizeHist()});
+</script></body></html>
