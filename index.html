@@ -10,16 +10,20 @@ html,body{height:100%;margin:0;background:#000;color:#fff;font-family:-apple-sys
 #pager::-webkit-scrollbar{display:none}
 .page{flex:0 0 100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow-y:auto;box-sizing:border-box;padding:12px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .lbl{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#777;margin-top:14px}
-.cct{font-size:64px;font-weight:200;line-height:1.05}.cct small{font-size:24px;color:#999;margin-left:4px}
-.gm{font-size:14px;color:#888;margin-top:2px;letter-spacing:.05em}.val{font-size:36px;font-weight:300}.val small{font-size:16px;color:#999;margin-left:4px}
-#hist{width:100%;height:140px;display:block}
-#go{margin-top:34px;width:100px;height:100px;border-radius:50%;border:2px solid #fff;background:#000;color:#fff;font-size:16px;letter-spacing:.1em;flex:none}
-#go:active{background:#222}#go:disabled{opacity:.4}
+.cct{font-size:72px;font-weight:200;line-height:1.05}.cct small{font-size:28px;color:#999;margin-left:4px}
+.gm{font-size:15px;color:#888;margin-top:4px;letter-spacing:.05em}
+#hist{width:100%;height:150px;display:block}
+.tri{position:relative;width:100%;max-width:320px;height:230px;margin-top:0;flex:none}
+.tri .scope{position:absolute;left:50%;top:0;margin:0;transform:translateX(-50%)}
+#go,#clr{position:absolute;top:142px;width:88px;height:88px;border-radius:50%;background:#000;color:#fff;font-size:14px;letter-spacing:.1em}
+#go{left:4px;border:2px solid #2ecc71;color:#2ecc71;background:#04160c}
+#clr{right:4px;border:2px solid #ffb02e;color:#ffb02e;background:#171000}#clr:active{background:#2a1c00}
+#go:active{background:#0b2c18}#go:disabled{opacity:.4}
 #st{min-height:32px;font-size:12px;color:#888;max-width:300px;margin-top:12px}
 h1{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:#777;font-weight:400;margin:18px 0 20px}
-.wheels{display:flex;gap:28px;justify-content:center}
+.wheels{display:flex;gap:14px;justify-content:center}
 .wl{font-size:11px;letter-spacing:.18em;color:#777;margin-bottom:8px}
-.ww{position:relative;height:176px;width:108px}
+.ww{position:relative;height:176px;width:92px}
 .ww::after{content:"";position:absolute;left:0;right:0;top:66px;height:44px;border-top:1px solid #555;border-bottom:1px solid #555;pointer-events:none}
 .wheel{height:176px;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;touch-action:pan-y;-webkit-mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent);mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent)}
 .wheel::-webkit-scrollbar{display:none}
@@ -32,7 +36,13 @@ nav button{flex:1;background:none;border:0;color:#555;display:flex;align-items:c
 nav button.on{color:#fff}
 nav button.on::after{content:"";position:absolute;bottom:8px;width:4px;height:4px;border-radius:50%;background:#fff}
 nav svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.scope{position:relative;width:168px;height:168px;border-radius:50%;overflow:hidden;border:1px solid #444;margin-top:14px;background:#0a0a0a;flex:none}
+.scope video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.scope svg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 0 1px #000)}
+.scope .ln{stroke:#fff;stroke-width:.7;opacity:.9}
+.scope .zone{fill:none;stroke:#fff;stroke-width:.6;stroke-dasharray:3 2;opacity:.9}
+.scope.all .zone{display:none}
+.hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#777;text-align:center;line-height:1.4;letter-spacing:.05em}
 </style></head><body>
 <div id="app">
 <div id="pager">
@@ -41,21 +51,32 @@ video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
     <div class="wheels">
       <div><div class="wl">ISO</div><div class="ww"><div class="wheel" id="wIso"></div></div></div>
       <div><div class="wl">FPS</div><div class="ww"><div class="wheel" id="wFps"></div></div></div>
+      <div><div class="wl">PROMEDIO</div><div class="ww"><div class="wheel" id="wAvg"></div></div></div>
     </div>
-    <div style="margin-top:26px"><button class="lk" id="cam">Cámara: trasera</button><button class="lk" id="cal">Calibrar lux</button></div>
-    <div id="ap">La cámara aplica estos valores al medir, si el dispositivo lo permite.</div>
+    <div style="margin-top:26px"><button class="lk" id="cam">Cámara: trasera</button><button class="lk" id="zone">Zona: todo el cuadro</button><button class="lk" id="exp">Exposición: fija</button></div>
+    <div id="ap">La cámara aplica estos valores al medir, si el dispositivo lo permite. «Todo el cuadro» estima la luz de la escena; «Centro» sirve para una tarjeta gris o blanca.</div>
   </section>
   <section class="page" id="pMain">
     <canvas id="hist"></canvas>
     <div class="lbl" style="margin-top:8px">Temperatura de color</div>
     <div class="cct"><span id="cct">—</span><small>K</small></div>
     <div class="gm" id="gm">G/M —</div>
-    <div class="lbl">Iluminancia</div>
-    <div class="val"><span id="lux">—</span><small>lx</small></div>
-    <div class="lbl">CRI aprox.</div>
-    <div class="val"><span id="cri">—</span></div>
+    <div class="tri">
+    <div class="scope" id="scope">
+      <video id="v" playsinline muted></video>
+      <div class="hint" id="hint">Toca para ver<br>la cámara</div>
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        
+        <path class="ln" d="M50 3V40M50 60V97M3 50H40M60 50H97"/>
+        
+        
+        <rect class="zone" x="30" y="30" width="40" height="40"/>
+      </svg>
+    </div>
     <button id="go">MEDIR</button>
-    <div id="st">Coloca la esfera blanca sobre la cámara y pulsa MEDIR.</div>
+      <button id="clr">LIMPIAR</button>
+    </div>
+    <div id="st">Toca el círculo para ver la cámara, centra un blanco o gris en la mira y pulsa MEDIR.</div>
   </section>
 </div>
 <nav>
@@ -63,13 +84,12 @@ video{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
   <button id="nMain" aria-label="Medición" class="on"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg></button>
 </nav>
 </div>
-<video id="v" playsinline muted></video>
 <script>
 const $=id=>document.getElementById(id);
 const ISOS=[50,100,200,400,800,1600,3200];
 const FPSL=[['23,97',23.976],['24',24],['30',30],['59,94',59.94],['60',60]];
-let cfg={iso:100,fps:30},stream=null,track=null,facing='environment',lastRaw=null,factor=1,measuring=false,readT=null;
-try{factor=parseFloat(localStorage.getItem('luxf'))||1;const c=JSON.parse(localStorage.getItem('luxcfg')||'null');if(c&&c.iso&&c.fps)cfg=c}catch(e){}
+let cfg={iso:100,fps:30,all:true,avg:1,expFix:true},stream=null,track=null,facing='environment',usedFacing=null,measuring=false,readT=null;
+try{const c=JSON.parse(localStorage.getItem('luxcfg')||'null');if(c&&c.iso&&c.fps)cfg=Object.assign(cfg,c)}catch(e){}
 const save=()=>{try{localStorage.setItem('luxcfg',JSON.stringify(cfg))}catch(e){}};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
@@ -93,14 +113,11 @@ function wheel(el,labels,idx,onChange){
 }
 wheel($('wIso'),ISOS,Math.max(0,ISOS.indexOf(cfg.iso)),i=>{cfg.iso=ISOS[i];save()});
 wheel($('wFps'),FPSL.map(f=>f[0]),Math.max(0,FPSL.findIndex(f=>Math.abs(f[1]-cfg.fps)<.01)),i=>{cfg.fps=FPSL[i][1];save()});
+const AVGL=[['0,5 s',.5],['1 s',1],['2 s',2],['4 s',4]];
+wheel($('wAvg'),AVGL.map(a=>a[0]),Math.max(0,AVGL.findIndex(a=>a[1]===cfg.avg)),i=>{cfg.avg=AVGL[i][1];save()});
 
 /* ---------- Histograma animado ---------- */
 const NB=38,K0=2800,K1=6500,bars=new Float32Array(NB);
-function kRGB(k){const t=k/100;let r,g,b;
-  r=t<=66?255:329.698727446*Math.pow(t-60,-.1332047592);
-  g=t<=66?99.4708025861*Math.log(t)-161.1195681661:288.1221695283*Math.pow(t-60,-.0755148492);
-  b=t>=66?255:(t<=19?0:138.5177312231*Math.log(t-10)-305.0447927307);
-  const c=v=>Math.max(0,Math.min(255,Math.round(v)));return [c(r),c(g),c(b)]}
 const STOPS=[[2800,[255,40,30]],[3200,[255,176,46]],[4200,[255,228,160]],[5600,[238,244,255]],[6500,[50,110,255]]];
 function stopRGB(k){for(let j=1;j<STOPS.length;j++){if(k<=STOPS[j][0]||j===STOPS.length-1){const a=STOPS[j-1],b=STOPS[j],f=Math.max(0,Math.min(1,(k-a[0])/(b[0]-a[0])));return a[1].map((v,n)=>Math.round(v+(b[1][n]-v)*f))}}}
 const cols=[...Array(NB)].map((_,i)=>stopRGB(K0+(K1-K0)*i/(NB-1)));
@@ -130,28 +147,42 @@ requestAnimationFrame(draw);
 const lin=c=>{c/=255;return c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4)};
 const cv=document.createElement('canvas');cv.width=cv.height=48;
 const cx=cv.getContext('2d',{willReadFrequently:true});
+/* Estima el color de la luz sin esfera: descarta píxeles oscuros o saturados (clipping)
+   y pondera más los píxeles poco cromáticos (superficies blancas/grises, que reflejan el color de la luz). */
 function sample(){
-  const v=$('v'),w=v.videoWidth,h=v.videoHeight,s=Math.min(w,h)*.4;
-  cx.drawImage(v,(w-s)/2,(h-s)/2,s,s,0,0,48,48);
-  const d=cx.getImageData(0,0,48,48).data;let r=0,g=0,b=0;const n=d.length/4;
-  for(let i=0;i<d.length;i+=4){r+=lin(d[i]);g+=lin(d[i+1]);b+=lin(d[i+2])}
-  return [r/n,g/n,b/n];
+  const v=$('v'),w=v.videoWidth,h=v.videoHeight;
+  if(cfg.all)cx.drawImage(v,0,0,w,h,0,0,48,48);
+  else{const s=Math.min(w,h)*.4;cx.drawImage(v,(w-s)/2,(h-s)/2,s,s,0,0,48,48)}
+  const d=cx.getImageData(0,0,48,48).data,n=d.length/4;
+  let r=0,g=0,b=0,ws=0,R=0,G=0,B=0;
+  for(let i=0;i<d.length;i+=4){
+    const pr=lin(d[i]),pg=lin(d[i+1]),pb=lin(d[i+2]);R+=pr;G+=pg;B+=pb;
+    const mx=Math.max(pr,pg,pb),mn=Math.min(pr,pg,pb);
+    if(mx<.03||mx>.97)continue;
+    const wt=Math.exp(-6*(mx-mn)/mx);r+=pr*wt;g+=pg*wt;b+=pb*wt;ws+=wt;
+  }
+  return ws>.5?[r/ws,g/ws,b/ws]:[R/n,G/n,B/n];
 }
 const yOf=s=>.2126*s[0]+.7152*s[1]+.0722*s[2];
 const ap=async o=>{try{await track.applyConstraints({advanced:[o]})}catch(e){}};
-async function start(){
-  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+async function start(light){
+  const fresh=!stream||!track||track.readyState!=='live'||usedFacing!==facing;
+  if(fresh&&stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  if(fresh){
   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:640},frameRate:{ideal:cfg.fps}},audio:false});
-  track=stream.getVideoTracks()[0];$('v').srcObject=stream;await $('v').play();
+  track=stream.getVideoTracks()[0];$('v').srcObject=stream;await $('v').play();usedFacing=facing;$('v').style.transform=facing==='user'?'scaleX(-1)':'';$('hint').style.display='none';}
   const c=track.getCapabilities?track.getCapabilities():{};
+  if(light)return c;
   try{await track.applyConstraints({width:{ideal:640},frameRate:{ideal:cfg.fps}})}catch(e){}
   if(c.whiteBalanceMode&&c.whiteBalanceMode.includes('manual')){await ap({whiteBalanceMode:'manual'});if(c.colorTemperature)await ap({colorTemperature:5000})}
-  if(c.exposureMode&&c.exposureMode.includes('manual'))await ap({exposureMode:'manual'});
-  if(c.iso)await ap({iso:Math.min(Math.max(cfg.iso,c.iso.min),c.iso.max)});
+  if(cfg.expFix){
+    if(c.exposureMode&&c.exposureMode.includes('manual'))await ap({exposureMode:'manual'});
+    if(c.iso)await ap({iso:Math.min(Math.max(cfg.iso,c.iso.min),c.iso.max)});
+  }
   return c;
 }
 async function fitExposure(c){
-  if(!c.exposureTime)return;
+  if(!c.exposureTime||!cfg.expFix)return;
   const min=c.exposureTime.min,max=Math.max(min,Math.min(c.exposureTime.max,1e4/cfg.fps)); // la exposición no excede 1/fps
   let t=Math.min(Math.max(min*4,min),max);
   for(let i=0;i<8;i++){
@@ -168,37 +199,33 @@ function analyze(rgb){
   const D=X+15*Y+3*Z,u=4*X/D,v=6*Y/D;
   const up=(.860117757+1.54118254e-4*T+1.28641212e-7*T*T)/(1+8.42420235e-4*T+7.08145163e-7*T*T);
   const vp=(.317398726+4.22806245e-5*T+4.20481691e-8*T*T)/(1-2.89741816e-5*T+1.61456053e-7*T*T);
-  const duv=Math.sign(v-vp)*Math.hypot(u-up,v-vp);
-  return {T,Y,duv,cri:Math.round(Math.max(40,Math.min(99,99-1500*Math.abs(duv))))};
+  return {T,duv:Math.sign(v-vp)*Math.hypot(u-up,v-vp)};
 }
 $('go').onclick=async()=>{
   const b=$('go');b.disabled=true;measuring=true;readT=null;$('st').textContent='Midiendo…';
   try{
     const c=await start();await sleep(500);await fitExposure(c);await sleep(300);
-    const N=Math.min(48,Math.max(12,Math.round(cfg.fps))),dt=1000/cfg.fps;let acc=[0,0,0];
+    const N=Math.min(300,Math.max(6,Math.round(cfg.fps*cfg.avg))),dt=1000/cfg.fps;let acc=[0,0,0];
     for(let i=0;i<N;i++){const s=sample();acc=acc.map((a,k)=>a+s[k]/N);await sleep(dt)}
     const a=analyze(acc),st=track.getSettings();
-    const t=st.exposureTime?st.exposureTime*1e-4:null,iso=st.iso||null;
+    const t=st.exposureTime?st.exposureTime*1e-4:null,locked=st.whiteBalanceMode==='manual';
     measuring=false;readT=a.T;
-    $('cct').textContent=Math.round(a.T/10)*10;$('cri').textContent='≈ '+a.cri;
+    $('cct').textContent=Math.round(a.T/10)*10;
     const gv=a.duv*1000,gm=$('gm');gm.textContent='G/M '+(gv>=0?'+':'−')+Math.abs(gv).toFixed(1);gm.style.color=Math.abs(gv)<.5?'#888':(gv>0?'#6fcf6f':'#e060d0');
-    if(t&&iso){
-      lastRaw=250*1.8*1.8/(t*iso)*(a.Y/.18);const lx=lastRaw*factor;
-      $('lux').textContent=lx>=100?Math.round(lx).toLocaleString('es'):lx.toFixed(1);
-      $('st').textContent='Medición lista. Valores aproximados.';
-    }else{
-      lastRaw=null;$('lux').textContent='—';
-      $('st').textContent='Este navegador no expone la exposición de la cámara; los lux requieren Chrome en Android.';
-    }
-    $('ap').textContent=`Aplicado: ISO ${st.iso||'—'} · ${st.frameRate?Math.round(st.frameRate*100)/100:'—'} fps · exposición ${t?'1/'+Math.round(1/t)+' s':'—'}`;
+    $('st').textContent=locked?'Medición lista (balance de blancos fijo).':'Medición lista. El balance de blancos automático sigue activo: la lectura puede estar sesgada.';
+    $('ap').textContent=`Aplicado: ISO ${st.iso||'—'} · ${st.frameRate?Math.round(st.frameRate*100)/100:'—'} fps · exposición ${t?'1/'+Math.round(1/t)+' s':'—'} · balance de blancos ${locked?'manual':'automático'}`;
   }catch(e){measuring=false;$('st').textContent='No se pudo usar la cámara: permite el acceso e inténtalo de nuevo.'}
   b.disabled=false;
 };
-$('cam').onclick=()=>{facing=facing==='environment'?'user':'environment';$('cam').textContent='Cámara: '+(facing==='environment'?'trasera':'frontal')};
-$('cal').onclick=()=>{
-  if(!lastRaw){$('ap').textContent='Primero haz una medición para calibrar.';return}
-  const r=parseFloat((prompt('Lux de referencia (de un luxómetro) para la última medición:')||'').replace(',','.'));
-  if(r>0){factor=r/lastRaw;try{localStorage.setItem('luxf',factor)}catch(e){}$('lux').textContent=Math.round(r);$('ap').textContent='Calibración guardada.'}
-};
+$('cam').onclick=()=>{facing=facing==='environment'?'user':'environment';$('cam').textContent='Cámara: '+(facing==='environment'?'trasera':'frontal');if(stream)start(true).catch(()=>{})};
+const zoneTxt=()=>{$('zone').textContent='Zona: '+(cfg.all?'todo el cuadro':'centro');$('scope').classList.toggle('all',cfg.all)};
+$('zone').onclick=()=>{cfg.all=!cfg.all;save();zoneTxt()};
+zoneTxt();
+const expTxt=()=>$('exp').textContent='Exposición: '+(cfg.expFix?'fija':'automática');
+$('exp').onclick=()=>{cfg.expFix=!cfg.expFix;save();expTxt()};
+expTxt();
+$('clr').onclick=()=>{if($('go').disabled)return;readT=null;$('cct').textContent='—';const g=$('gm');g.textContent='G/M —';g.style.color='';$('st').textContent='Listo para una nueva lectura. Centra un blanco o gris en la mira y pulsa MEDIR.'};
+$('scope').onclick=()=>{if(!stream)start(true).catch(()=>{$('st').textContent='No se pudo usar la cámara: permite el acceso e inténtalo de nuevo.'})};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream){stream.getTracks().forEach(t=>t.stop());stream=null;$('hint').style.display=''}});
 addEventListener('load',()=>{goTo(1,false);mark();sizeHist()});
 </script></body></html>
