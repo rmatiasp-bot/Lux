@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Medidor de luz</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;background:#000;color:#fff;font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;overscroll-behavior:none}
+#app{height:100%;display:flex;flex-direction:column}
+#pager{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none}
+#pager::-webkit-scrollbar{display:none}
+.page{flex:0 0 100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow-y:auto;box-sizing:border-box;padding:12px 20px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.lbl{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#777;margin-top:14px}
+.cct{font-size:72px;font-weight:200;line-height:1.05}.cct small{font-size:28px;color:#999;margin-left:4px}
+.gm{font-size:15px;color:#888;margin-top:4px;margin-bottom:16px;letter-spacing:.05em}
+#hist{width:100%;height:150px;display:block}
+.tri{position:relative;width:100%;max-width:320px;height:230px;margin-top:0;flex:none}
+.tri .scope{position:absolute;left:50%;top:0;margin:0;transform:translateX(-50%)}
+#go,#clr{position:absolute;top:142px;width:88px;height:88px;border-radius:50%;background:#000;color:#fff;font-size:14px;letter-spacing:.1em}
+#go{left:4px;border:2px solid #2ecc71;color:#2ecc71;background:#04160c}
+#clr{right:4px;border:2px solid #ffb02e;color:#ffb02e;background:#171000}#clr:active{background:#2a1c00}
+#go:active{background:#0b2c18}#go:disabled{opacity:.4}
+#st{min-height:32px;font-size:12px;color:#888;max-width:300px;margin-top:12px}
+h1{font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:#777;font-weight:400;margin:18px 0 20px}
+.wheels{display:flex;gap:14px;justify-content:center}
+.wl{font-size:11px;letter-spacing:.18em;color:#777;margin-bottom:8px}
+.ww{position:relative;height:176px;width:92px}
+.ww::after{content:"";position:absolute;left:0;right:0;top:66px;height:44px;border-top:1px solid #555;border-bottom:1px solid #555;pointer-events:none}
+.wheel{height:176px;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;touch-action:pan-y;-webkit-mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent);mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent)}
+.wheel::-webkit-scrollbar{display:none}
+.pad{height:66px}
+.it{height:44px;line-height:44px;scroll-snap-align:center;font-size:26px;font-weight:300;color:#fff;transition:color .1s}
+.lk{background:none;border:1px solid #333;color:#aaa;font-size:13px;border-radius:18px;padding:9px 16px;margin:6px}
+#ap{font-size:12px;color:#777;margin-top:22px;max-width:300px;line-height:1.5}
+header{flex:none;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 18px;position:relative;z-index:5}
+#ttl{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#777}
+#mbtn{width:38px;height:38px;border-radius:10px;background:#d32f2f;border:0;color:#fff;display:flex;align-items:center;justify-content:center}
+#mbtn svg{width:22px;height:22px;fill:currentColor}
+#menu{position:absolute;right:8px;top:42px;min-width:150px;background:#121212;border:1px solid #2a2a2a;border-radius:10px;padding:4px;display:none;box-shadow:0 8px 24px #000a}
+#menu.open{display:block}
+#menu button{display:block;width:100%;text-align:left;background:none;border:0;color:#bbb;font-size:15px;padding:12px 14px;border-radius:7px}
+#menu button.on{color:#fff;background:#1e1e1e}
+#clr.on{background:#ffb02e;color:#000}
+#calb{position:absolute;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:.15em;color:#2ecc71;border:1px solid #2ecc71;border-radius:8px;padding:2px 7px;display:none}
+#calb.on{display:block}
+.scope.sm{width:120px;height:120px;margin:6px auto 0}
+.refs{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px;max-width:340px}
+.rf{background:#0a0a0a;border:1px solid #333;border-bottom:3px solid var(--c);color:#ddd;border-radius:10px;padding:8px 10px;font-size:13px;min-width:104px}
+.rf small{display:block;font-size:10px;color:#666;margin-top:3px}
+.rf.sel{border-color:#fff;border-bottom-color:var(--c);background:#161616}
+.rf.ok small{color:#8bd48b}
+.crow{display:flex;align-items:center;gap:12px;margin-top:14px}
+#ctake{width:84px;height:84px;border-radius:50%;border:2px solid #2ecc71;color:#2ecc71;background:#04160c;font-size:14px;letter-spacing:.1em}
+#ctake:disabled{opacity:.4}
+#cst,#cwarn{font-size:12px;color:#888;max-width:300px;margin-top:10px;line-height:1.4}
+#cwarn{color:#ffb02e}
+.lg{width:100%;max-width:360px;text-align:left;margin-top:8px}
+.lr{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #1a1a1a}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.lm{flex:1;min-width:0}.l1{font-size:20px;font-weight:300}.l1 small{font-size:12px;color:#888;margin-left:8px}
+.l2{font-size:11px;color:#666;margin-top:2px}
+.lx{background:none;border:0;color:#666;font-size:18px;padding:6px}
+.empty{color:#666;font-size:13px;margin-top:40px;text-align:center;line-height:1.5}
+.scope{position:relative;width:168px;height:168px;border-radius:50%;overflow:hidden;border:1px solid #444;margin-top:14px;background:#0a0a0a;flex:none}
+.scope video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.scope svg{position:absolute;inset:0;width:100%;height:100%;filter:drop-shadow(0 0 1px #000)}
+.scope .ln{stroke:#fff;stroke-width:.7;opacity:.9}
+.scope .zone{fill:none;stroke:#fff;stroke-width:.6;stroke-dasharray:3 2;opacity:.9}
+.scope.all .zone{display:none}
+.hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#777;text-align:center;line-height:1.4;letter-spacing:.05em}
+</style></head><body>
+<div id="app">
+<header><span id="ttl">Medición</span><span id="calb">CAL</span><button id="mbtn" aria-label="Menú"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+<div id="menu"><button data-p="0">Setup</button><button data-p="1">Medición</button><button data-p="2">Log</button></div></header>
+<div id="pager">
+  <section class="page" id="pSet">
+    <h1>Calibración</h1>
+    <div class="scope sm" id="scope2">
+      <video id="v2" playsinline muted></video>
+      <div class="hint" id="hint2">Toca para<br>encuadrar</div>
+      <svg viewBox="0 0 100 100" aria-hidden="true"><path class="ln" d="M50 3V40M50 60V97M3 50H40M60 50H97"/><circle class="zone" cx="50" cy="50" r="20"/></svg>
+    </div>
+    <div class="refs" id="refs"></div>
+    <div class="crow"><button id="ctake">TAKE</button><button class="lk" id="crst">Restablecer</button></div>
+    <div id="cst">Selecciona una referencia, encuadra la tarjeta gris y pulsa TAKE.</div>
+    <div id="cwarn"></div>
+    <div style="margin-top:26px"><button class="lk" id="cam">Cámara: trasera</button><button class="lk" id="zone">Zona: todo el cuadro</button><button class="lk" id="exp">Exposición: fija</button></div>
+    <div id="ap">Se aplica al medir, si el dispositivo lo permite. «Todo el cuadro» estima la luz de la escena; «Centro» sirve para una tarjeta gris o blanca.</div>
+  </section>
+  <section class="page" id="pMain">
+    <canvas id="hist"></canvas>
+    <div class="lbl" style="margin-top:8px">Temperatura de color</div>
+    <div class="cct"><span id="cct">—</span><small>K</small></div>
+    <div class="gm" id="gm">G/M —</div>
+    <div class="tri">
+    <div class="scope" id="scope">
+      <video id="v" playsinline muted></video>
+      <div class="hint" id="hint">Toca para ver<br>la cámara</div>
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        
+        <path class="ln" d="M50 3V40M50 60V97M3 50H40M60 50H97"/>
+        
+        
+        <circle class="zone" cx="50" cy="50" r="20"/>
+      </svg>
+    </div>
+    <button id="go">MEAS</button>
+      <button id="clr">LIVE</button>
+    </div>
+    <div id="st">Toca el círculo para ver la cámara, centra un blanco o gris en la mira y pulsa MEAS.</div>
+  </section>
+  <section class="page" id="pLog">
+    <h1>Log</h1>
+    <div><button class="lk" id="lcopy">Copiar</button><button class="lk" id="lclr">Borrar todo</button></div>
+    <div class="lg" id="lg"></div>
+  </section>
+</div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const ISOS=[50,100,200,400,800,1600,3200];
+const FPSL=[['23,97',23.976],['24',24],['30',30],['59,94',59.94],['60',60]];
+let cfg={iso:100,fps:30,all:false,avg:1,expFix:true},stream=null,track=null,facing='environment',usedFacing=null,measuring=false,live=false,readT=null;
+try{const c=JSON.parse(localStorage.getItem('luxcfg2')||'null');if(c&&c.iso&&c.fps)cfg=Object.assign(cfg,c)}catch(e){}
+const save=()=>{try{localStorage.setItem('luxcfg2',JSON.stringify(cfg))}catch(e){}};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------- Páginas y navegación ---------- */
+const pager=$('pager');
+function goTo(i,smooth){pager.scrollTo({left:i*pager.clientWidth,behavior:smooth?'smooth':'auto'})}
+const PN=['Setup','Medición','Log'];
+function mark(){const i=Math.round(pager.scrollLeft/pager.clientWidth);$('ttl').textContent=PN[i]||'';document.querySelectorAll('#menu button').forEach(b=>b.classList.toggle('on',+b.dataset.p===i));if(i!==1&&live)stopLive('En vivo detenido.')}
+pager.addEventListener('scroll',mark,{passive:true});
+$('mbtn').onclick=e=>{e.stopPropagation();$('menu').classList.toggle('open')};
+$('menu').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('menu').classList.remove('open');goTo(+b.dataset.p,true)};
+document.addEventListener('click',()=>$('menu').classList.remove('open'));
+addEventListener('resize',()=>{mark();sizeHist()});
+
+/* ---------- Ruedas (ruleta) ---------- */
+function wheel(el,labels,idx,onChange){
+  el.innerHTML='<div class="pad"></div>'+labels.map(l=>`<div class="it">${l}</div>`).join('')+'<div class="pad"></div>';
+  const items=[...el.querySelectorAll('.it')];let tm=null,last=-1;
+  const paint=()=>{const p=el.scrollTop/44;items.forEach((it,i)=>{const d=Math.abs(i-p);it.style.transform=`scale(${1-.14*Math.min(d,2)})`;it.style.opacity=Math.max(.25,1-.38*d)});
+    const k=Math.max(0,Math.min(labels.length-1,Math.round(p)));if(k!==last){last=k;if(navigator.vibrate)try{navigator.vibrate(4)}catch(e){}}};
+  el.addEventListener('scroll',()=>{paint();clearTimeout(tm);tm=setTimeout(()=>onChange(last),140)},{passive:true});
+  items.forEach((it,i)=>it.onclick=()=>el.scrollTo({top:i*44,behavior:'smooth'}));
+  const init=()=>{el.scrollTop=idx*44;paint()};requestAnimationFrame(()=>requestAnimationFrame(init));
+}
+
+/* ---------- Histograma animado ---------- */
+const NB=38,K0=2800,K1=6500,bars=new Float32Array(NB);
+const STOPS=[[2800,[255,40,30]],[3200,[255,176,46]],[4200,[255,228,160]],[5600,[238,244,255]],[6500,[50,110,255]]];
+function stopRGB(k){for(let j=1;j<STOPS.length;j++){if(k<=STOPS[j][0]||j===STOPS.length-1){const a=STOPS[j-1],b=STOPS[j],f=Math.max(0,Math.min(1,(k-a[0])/(b[0]-a[0])));return a[1].map((v,n)=>Math.round(v+(b[1][n]-v)*f))}}}
+const cols=[...Array(NB)].map((_,i)=>stopRGB(K0+(K1-K0)*i/(NB-1)));
+const hc=$('hist'),hx=hc.getContext('2d');let dpr=1;
+function sizeHist(){dpr=window.devicePixelRatio||1;hc.width=Math.max(1,hc.clientWidth*dpr);hc.height=Math.max(1,hc.clientHeight*dpr)}
+sizeHist();
+function draw(ts){
+  const t=ts/1000,W=hc.width,H=hc.height,lab=16*dpr,mh=H-lab-4*dpr,bw=W/NB;
+  hx.clearRect(0,0,W,H);
+  const pos=readT==null?null:Math.max(0,Math.min(NB-1,(readT-K0)/(K1-K0)*(NB-1)));
+  for(let i=0;i<NB;i++){
+    let tg=.07+.04*Math.sin(t*1.6+i*.5),al=.55;
+    if(measuring)tg=.1+.3*(.5+.5*Math.sin(t*6-i*.5));
+    else if(pos!=null){const d=i-pos,g=Math.exp(-d*d/(2*2.2*2.2));tg+=g*(.88+.04*Math.sin(t*5+i));al=.4+.6*Math.exp(-d*d/(2*1.6*1.6))}
+    bars[i]+=(Math.min(tg,1)-bars[i])*.12;
+    const h=Math.max(3*dpr,bars[i]*mh),x=i*bw+bw*.14,w=bw*.72,y=mh-h;
+    const pk=pos!=null&&!measuring&&i===Math.round(pos);const c=pk?[255,255,255]:cols[i];hx.fillStyle=`rgba(${c[0]},${c[1]},${c[2]},${pk?1:al})`;
+    hx.beginPath();hx.roundRect?hx.roundRect(x,y,w,h,w/2.2):hx.rect(x,y,w,h);hx.fill();
+  }
+  hx.fillStyle='#555';hx.font=`${10*dpr}px -apple-system,Arial`;hx.textBaseline='bottom';
+  hx.textAlign='left';hx.fillText('2800 K',2,H);hx.textAlign='center';hx.fillText('4650 K',W/2,H);hx.textAlign='right';hx.fillText('6500 K',W-2,H);
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+/* ---------- Cámara y medición ---------- */
+const lin=c=>{c/=255;return c<=.04045?c/12.92:Math.pow((c+.055)/1.055,2.4)};
+const cv=document.createElement('canvas');cv.width=cv.height=48;
+const cx=cv.getContext('2d',{willReadFrequently:true});
+/* Estima el color de la luz sin esfera: descarta píxeles oscuros o saturados (clipping)
+   y pondera más los píxeles poco cromáticos (superficies blancas/grises, que reflejan el color de la luz). */
+function sample(){
+  const v=$('v'),w=v.videoWidth,h=v.videoHeight;
+  if(cfg.all)cx.drawImage(v,0,0,w,h,0,0,48,48);
+  else{const s=Math.min(w,h)*.4;cx.drawImage(v,(w-s)/2,(h-s)/2,s,s,0,0,48,48)}
+  const d=cx.getImageData(0,0,48,48).data,n=d.length/4;
+  let r=0,g=0,b=0,ws=0,R=0,G=0,B=0,cnt=0;
+  for(let i=0;i<d.length;i+=4){
+    if(!cfg.all){const q=i>>2,qx=q%48-23.5,qy=(q/48|0)-23.5;if(qx*qx+qy*qy>576)continue}
+    const pr=lin(d[i]),pg=lin(d[i+1]),pb=lin(d[i+2]);R+=pr;G+=pg;B+=pb;cnt++;
+    const mx=Math.max(pr,pg,pb),mn=Math.min(pr,pg,pb);
+    if(mx<.03||mx>.97)continue;
+    const wt=Math.exp(-6*(mx-mn)/mx);r+=pr*wt;g+=pg*wt;b+=pb*wt;ws+=wt;
+  }
+  return ws>.5?[r/ws,g/ws,b/ws]:[R/Math.max(cnt,1),G/Math.max(cnt,1),B/Math.max(cnt,1)];
+}
+const yOf=s=>.2126*s[0]+.7152*s[1]+.0722*s[2];
+const ap=async o=>{try{await track.applyConstraints({advanced:[o]})}catch(e){}};
+async function start(light){
+  const fresh=!stream||!track||track.readyState!=='live'||usedFacing!==facing;
+  if(fresh&&stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+  if(fresh){
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:640},frameRate:{ideal:cfg.fps}},audio:false});
+  track=stream.getVideoTracks()[0];$('v').srcObject=stream;await $('v').play();usedFacing=facing;$('v').style.transform=facing==='user'?'scaleX(-1)':'';$('hint').style.display='none';$('v2').srcObject=stream;$('v2').play().catch(()=>{});$('v2').style.transform=facing==='user'?'scaleX(-1)':'';$('hint2').style.display='none';}
+  const c=track.getCapabilities?track.getCapabilities():{};
+  if(light)return c;
+  try{await track.applyConstraints({width:{ideal:640},frameRate:{ideal:cfg.fps}})}catch(e){}
+  if(c.whiteBalanceMode&&c.whiteBalanceMode.includes('manual')){await ap({whiteBalanceMode:'manual'});if(c.colorTemperature)await ap({colorTemperature:5000})}
+  if(cfg.expFix){
+    if(c.exposureMode&&c.exposureMode.includes('manual'))await ap({exposureMode:'manual'});
+    if(c.iso)await ap({iso:Math.min(Math.max(cfg.iso,c.iso.min),c.iso.max)});
+  }
+  return c;
+}
+async function fitExposure(c){
+  if(!c.exposureTime||!cfg.expFix)return;
+  const min=c.exposureTime.min,max=Math.max(min,Math.min(c.exposureTime.max,1e4/cfg.fps)); // la exposición no excede 1/fps
+  let t=Math.min(Math.max(min*4,min),max);
+  for(let i=0;i<8;i++){
+    await ap({exposureMode:'manual',exposureTime:t});await sleep(350);
+    const y=yOf(sample());if(y>.12&&y<.6)return;
+    const nt=Math.min(Math.max(t*(.3/Math.max(y,.002)),min),max);if(nt===t)return;t=nt;
+  }
+}
+function analyze(rgb){
+  const [R,G,B]=rgb;
+  const X=.4124*R+.3576*G+.1805*B,Y=.2126*R+.7152*G+.0722*B,Z=.0193*R+.1192*G+.9505*B,S=X+Y+Z;
+  const x=X/S,y=Y/S,n=(x-.332)/(y-.1858);
+  const T=Math.max(1000,Math.min(25000,-449*n**3+3525*n**2-6823.3*n+5520.33));
+  const D=X+15*Y+3*Z,u=4*X/D,v=6*Y/D;
+  const up=(.860117757+1.54118254e-4*T+1.28641212e-7*T*T)/(1+8.42420235e-4*T+7.08145163e-7*T*T);
+  const vp=(.317398726+4.22806245e-5*T+4.20481691e-8*T*T)/(1-2.89741816e-5*T+1.61456053e-7*T*T);
+  return {T,duv:Math.sign(v-vp)*Math.hypot(u-up,v-vp)};
+}
+$('go').onclick=async()=>{
+  if(live)stopLive();const b=$('go');b.disabled=true;measuring=true;readT=null;$('st').textContent='Midiendo…';
+  try{
+    const c=await start();await sleep(500);await fitExposure(c);await sleep(300);
+    const N=Math.min(300,Math.max(6,Math.round(cfg.fps*cfg.avg))),dt=1000/cfg.fps;let acc=[0,0,0];
+    for(let i=0;i<N;i++){const s=sample();acc=acc.map((a,k)=>a+s[k]/N);await sleep(dt)}
+    const a=correct(analyze(acc)),st=track.getSettings();
+    const t=st.exposureTime?st.exposureTime*1e-4:null,locked=st.whiteBalanceMode==='manual';
+    measuring=false;readT=a.T;
+    $('cct').textContent=Math.round(a.T/10)*10;
+    const gv=a.duv*1000,gm=$('gm');gm.textContent='G/M '+(gv>=0?'+':'−')+Math.abs(gv).toFixed(1);gm.style.color=Math.abs(gv)<.5?'#888':(gv>0?'#6fcf6f':'#e060d0');
+    addLog(a);$('st').textContent=locked?'Lectura guardada en el log (balance de blancos fijo).':'Lectura guardada en el log. El balance de blancos automático sigue activo: puede estar sesgada.';
+    $('ap').textContent=`Aplicado: ISO ${st.iso||'—'} · ${st.frameRate?Math.round(st.frameRate*100)/100:'—'} fps · exposición ${t?'1/'+Math.round(1/t)+' s':'—'} · balance de blancos ${locked?'manual':'automático'}`;
+  }catch(e){measuring=false;$('st').textContent='No se pudo usar la cámara: permite el acceso e inténtalo de nuevo.'}
+  b.disabled=false;
+};
+$('cam').onclick=()=>{facing=facing==='environment'?'user':'environment';$('cam').textContent='Cámara: '+(facing==='environment'?'trasera':'frontal');if(stream)start(true).catch(()=>{});renderCal()};
+const zoneTxt=()=>{$('zone').textContent='Zona: '+(cfg.all?'todo el cuadro':'centro');$('scope').classList.toggle('all',cfg.all);$('scope2').classList.toggle('all',cfg.all)};
+$('zone').onclick=()=>{cfg.all=!cfg.all;save();zoneTxt()};
+zoneTxt();
+const expTxt=()=>$('exp').textContent='Exposición: '+(cfg.expFix?'fija':'automática');
+$('exp').onclick=()=>{cfg.expFix=!cfg.expFix;save();expTxt()};
+expTxt();
+/* ---------- Live (tiempo real, no se guarda en el log) ---------- */
+let liveT=null,ema=null;
+function showRead(a){$('cct').textContent=Math.round(a.T/10)*10;const gv=a.duv*1000,gm=$('gm');gm.textContent='G/M '+(gv>=0?'+':'−')+Math.abs(gv).toFixed(1);gm.style.color=Math.abs(gv)<.5?'#888':(gv>0?'#6fcf6f':'#e060d0')}
+function stopLive(msg){live=false;clearTimeout(liveT);$('clr').classList.remove('on');if(msg)$('st').textContent=msg}
+async function startLive(){
+  if(live){stopLive('En vivo detenido. Pulsa MEAS para guardar una lectura.');return}
+  if($('go').disabled)return;
+  live=true;ema=null;readT=null;measuring=true;$('clr').classList.add('on');$('st').textContent='Iniciando en vivo…';
+  try{const c=await start();await sleep(400);if(live)await fitExposure(c);await sleep(200)}
+  catch(e){stopLive('No se pudo usar la cámara: permite el acceso e inténtalo de nuevo.');measuring=false;return}
+  if(!live)return;
+  measuring=false;$('st').textContent='En vivo. Estas lecturas no se guardan en el log.';
+  let last=performance.now();
+  const tick=()=>{
+    if(!live)return;
+    try{const now=performance.now(),dt=(now-last)/1000;last=now;
+      const s=sample(),al=1-Math.exp(-dt/Math.max(.15,cfg.avg*.5));
+      ema=ema?ema.map((e,k)=>e+(s[k]-e)*al):s;
+      const a=correct(analyze(ema));readT=a.T;showRead(a)}catch(e){}
+    liveT=setTimeout(tick,1000/Math.min(cfg.fps,15));
+  };
+  tick();
+}
+$('clr').onclick=startLive;
+/* ---------- Log ---------- */
+let LOG=[];try{LOG=JSON.parse(localStorage.getItem('luxlog')||'[]')}catch(e){}
+const saveLog=()=>{try{localStorage.setItem('luxlog',JSON.stringify(LOG.slice(0,300)))}catch(e){}};
+function addLog(a){LOG.unshift({t:Date.now(),T:Math.round(a.T/10)*10,g:+(a.duv*1000).toFixed(1),iso:cfg.iso,fps:cfg.fps,avg:cfg.avg,zone:cfg.all?'cuadro':'centro',cam:facing==='environment'?'trasera':'frontal',exp:cfg.expFix?'fija':'auto'});saveLog();renderLog()}
+function renderLog(){
+  const el=$('lg');
+  if(!LOG.length){el.innerHTML='<div class="empty">Aún no hay lecturas.<br>Pulsa MEAS para guardar una.</div>';return}
+  el.innerHTML=LOG.map((e,i)=>{const c=stopRGB(Math.max(K0,Math.min(K1,e.T)));
+    return `<div class="lr"><span class="dot" style="background:rgb(${c})"></span><div class="lm"><div class="l1">${e.T} K<small>G/M ${e.g>=0?'+':'−'}${Math.abs(e.g).toFixed(1)}</small></div><div class="l2">${new Date(e.t).toLocaleString('es',{dateStyle:'short',timeStyle:'medium'})} · ISO ${e.iso} · ${e.fps} fps · prom. ${e.avg} s · ${e.zone}</div></div><button class="lx" data-i="${i}" aria-label="Borrar">✕</button></div>`}).join('');
+}
+$('lg').onclick=e=>{const b=e.target.closest('.lx');if(!b)return;LOG.splice(+b.dataset.i,1);saveLog();renderLog()};
+$('lcopy').onclick=async()=>{
+  const txt='fecha,K,G/M,ISO,FPS,promedio_s,zona,camara,exposicion\n'+LOG.map(e=>[new Date(e.t).toISOString(),e.T,e.g,e.iso,e.fps,e.avg,e.zone,e.cam,e.exp].join(',')).join('\n');
+  let ok=false;try{await navigator.clipboard.writeText(txt);ok=true}catch(e){try{const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();ok=document.execCommand('copy');ta.remove()}catch(e2){}}
+  $('lcopy').textContent=ok?'Copiado':'No se pudo copiar';setTimeout(()=>$('lcopy').textContent='Copiar',1800)};
+let armT=null;
+$('lclr').onclick=()=>{const b=$('lclr');if(b.dataset.arm){LOG=[];saveLog();renderLog();delete b.dataset.arm;b.textContent='Borrar todo';clearTimeout(armT)}else{b.dataset.arm=1;b.textContent='¿Seguro? Toca de nuevo';armT=setTimeout(()=>{delete b.dataset.arm;b.textContent='Borrar todo'},3000)}};
+renderLog();
+/* ---------- Calibración ---------- */
+const REFS=[2800,3200,4900,5600,6500];
+let CAL={},selRef=null;try{CAL=JSON.parse(localStorage.getItem('luxcal')||'{}')}catch(e){}
+const saveCal=()=>{try{localStorage.setItem('luxcal',JSON.stringify(CAL))}catch(e){}};
+const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+function linfit(xs,ys){const mx=mean(xs),my=mean(ys);let sxx=0,sxy=0;xs.forEach((x,i)=>{sxx+=(x-mx)**2;sxy+=(x-mx)*(ys[i]-my)});if(Math.sqrt(sxx/xs.length)<12)return null;const m=sxy/sxx;return [m,my-m*mx]}
+function calPts(){const o=CAL[facing]||{};return Object.keys(o).map(k=>({k:+k,m:1e6/o[k].T,g:o[k].g}))}
+function correct(a){
+  const p=calPts();if(!p.length)return a;
+  const mm=1e6/a.T,xs=p.map(q=>q.m),ys=p.map(q=>1e6/q.k);
+  const f=p.length>1?linfit(xs,ys):null;
+  const r=(f&&f[0]>.3&&f[0]<3)?f[0]*mm+f[1]:mm+mean(ys.map((y,i)=>y-xs[i]));
+  const gs=p.map(q=>q.g),fg=p.length>1?linfit(xs,gs):null,goff=fg?fg[0]*mm+fg[1]:mean(gs);
+  return {T:Math.max(1000,Math.min(25000,1e6/Math.max(r,40))),duv:(a.duv*1000-goff)/1000};
+}
+$('refs').innerHTML=REFS.map(k=>`<button class="rf" data-k="${k}" style="--c:rgb(${stopRGB(Math.max(K0,Math.min(K1,k)))})">${k}K - 0 G/M<small></small></button>`).join('');
+function renderCal(){
+  const o=CAL[facing]||{};
+  document.querySelectorAll('#refs .rf').forEach(b=>{const k=b.dataset.k,e=o[k];b.classList.toggle('sel',selRef===k);b.classList.toggle('ok',!!e);
+    b.querySelector('small').textContent=e?`c\u00e1mara: ${Math.round(e.T/10)*10} K \u00b7 ${e.g>=0?'+':'\u2212'}${Math.abs(e.g).toFixed(1)}`:'sin registrar'});
+  const p=calPts(),xs=p.map(q=>q.m);$('calb').classList.toggle('on',p.length>0);
+  $('cwarn').textContent=(p.length>1&&Math.max(...xs)-Math.min(...xs)<25)?'Las lecturas de la c\u00e1mara son casi iguales entre referencias: probablemente el balance de blancos autom\u00e1tico est\u00e1 activo. Solo se aplicar\u00e1 un ajuste de desplazamiento.':'';
+}
+$('refs').onclick=e=>{const b=e.target.closest('.rf');if(!b)return;selRef=b.dataset.k;renderCal()};
+async function grabReading(){
+  const c=await start();await sleep(500);await fitExposure(c);await sleep(300);
+  const N=Math.min(300,Math.max(6,Math.round(cfg.fps*cfg.avg))),dt=1000/cfg.fps;let acc=[0,0,0];
+  for(let i=0;i<N;i++){const s=sample();acc=acc.map((x,k)=>x+s[k]/N);await sleep(dt)}
+  return analyze(acc);
+}
+$('ctake').onclick=async()=>{
+  if(!selRef){$('cst').textContent='Primero selecciona una referencia.';return}
+  if(live)stopLive();if($('go').disabled||$('ctake').disabled)return;
+  $('ctake').disabled=true;$('go').disabled=true;$('cst').textContent='Registrando '+selRef+' K\u2026';
+  try{const a=await grabReading();(CAL[facing]=CAL[facing]||{})[selRef]={T:Math.round(a.T),g:+(a.duv*1000).toFixed(1)};saveCal();renderCal();
+    $('cst').textContent=`Registrado ${selRef} K: la c\u00e1mara midi\u00f3 ${Math.round(a.T/10)*10} K.`}
+  catch(e){$('cst').textContent='No se pudo usar la c\u00e1mara: permite el acceso e int\u00e9ntalo de nuevo.'}
+  $('ctake').disabled=false;$('go').disabled=false};
+$('crst').onclick=()=>{CAL[facing]={};saveCal();renderCal();$('cst').textContent='Calibraci\u00f3n restablecida.'};
+$('scope2').onclick=()=>{if(!stream)start(true).catch(()=>{$('cst').textContent='No se pudo usar la c\u00e1mara: permite el acceso e int\u00e9ntalo de nuevo.'})};
+renderCal();
+$('scope').onclick=()=>{if(!stream)start(true).catch(()=>{$('st').textContent='No se pudo usar la cámara: permite el acceso e inténtalo de nuevo.'})};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&live)stopLive('En vivo detenido.');if(document.hidden&&stream){stream.getTracks().forEach(t=>t.stop());stream=null;$('hint').style.display='';$('hint2').style.display=''}});
+addEventListener('load',()=>{goTo(1,false);mark();sizeHist()});
+</script></body></html>
